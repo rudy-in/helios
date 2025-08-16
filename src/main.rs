@@ -32,8 +32,8 @@ enum Mode {
 fn main() -> io::Result<()> {
     let dir = Args::parse();
 
-    
-    let mut files: Vec<_> = WalkDir::new(&dir.path) // collect all files recursively
+    // collect all files recursively
+    let mut files: Vec<_> = WalkDir::new(&dir.path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
@@ -79,6 +79,7 @@ fn main() -> io::Result<()> {
     let mut query = String::new();
     let mut results: Vec<String> = Vec::new();
     let mut mode = Mode::Insert;
+    let mut scroll: u16 = 0;
 
     loop {
         terminal.draw(|f| {
@@ -95,7 +96,8 @@ fn main() -> io::Result<()> {
                     lines.push(render_highlighted(&query, result));
                 }
                 let results_widget = Paragraph::new(Text::from(lines))
-                    .block(Block::default().title("Results").borders(Borders::ALL));
+                    .block(Block::default().title("Results").borders(Borders::ALL))
+                    .scroll((scroll, 0)); // apply scroll
                 f.render_widget(results_widget, chunks[0]);
             } else {
                 let empty = Paragraph::new("No results")
@@ -138,8 +140,10 @@ fn main() -> io::Result<()> {
                                     .iter()
                                     .map(|f| format!("'{}' found in {}", q, f))
                                     .collect();
+                                scroll = 0; // reset scroll
                             } else {
                                 results = vec![format!("'{}' not found in any file", q)];
+                                scroll = 0;
                             }
                         }
                     }
@@ -150,6 +154,14 @@ fn main() -> io::Result<()> {
                     (Mode::Command, KeyCode::Char('i')) => {
                         mode = Mode::Insert; // back to insert
                         query.clear();
+                    }
+
+                    // scrolling
+                    (_, KeyCode::Down) | (_, KeyCode::Char('j')) => {
+                        scroll = scroll.saturating_add(1);
+                    }
+                    (_, KeyCode::Up) | (_, KeyCode::Char('k')) => {
+                        scroll = scroll.saturating_sub(1);
                     }
                     _ => {}
                 }
@@ -167,7 +179,6 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-
 fn render_highlighted<'a>(query: &str, content: &str) -> Line<'a> {
     let mut spans: Vec<Span> = Vec::new();
 
@@ -175,7 +186,7 @@ fn render_highlighted<'a>(query: &str, content: &str) -> Line<'a> {
         if word.to_lowercase().contains(&query.to_lowercase()) {
             spans.push(Span::styled(
                 format!("{} ", word),
-                Style::default().fg(Color::Black).bg(Color::Yellow),
+                Style::default().fg(Color::Black).bg(Color::Cyan),
             ));
         } else {
             spans.push(Span::raw(format!("{} ", word)));
