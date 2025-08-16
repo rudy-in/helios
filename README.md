@@ -1,3 +1,6 @@
 # HELIOS
 
-A Decentralized Search Engine which searches for both the system and the internet
+A Decentralized Search Engine which searches for clusters of servers
+
+
+im too lazy to update this..
